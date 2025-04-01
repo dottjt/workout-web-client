@@ -1,21 +1,43 @@
-# Node.js with React
-# Build a Node.js project that uses React.
-# Add steps that analyze code, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
-
 trigger:
-- main
+  branches:
+    include:
+      - main  # Change this if your branch is different
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
+
+variables:
+  IMAGE_NAME: 'workout.azurecr.io/nextjs-app:$(Build.BuildId)'
+  AZURE_WEB_APP_NAME: 'workout-web-client-app'
+  DEVOPS_AZURE_RESOURCE_MANAGER_NAME: 'workout-azure-resource-manager'
+  DEVOPS_AZURE_CONTAINER_REGISTRY_NAME: 'workout-acr-service-connection'
 
 steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+  - task: Checkout@v2
 
-- script: |
-    npm install
-    npm run build
-  displayName: 'npm install and build'
+  - task: NodeTool@0
+    inputs:
+      versionSpec: '18.x'
+
+  - script: |
+      npm ci
+      npm run build
+    displayName: 'Install dependencies & build Next.js'
+
+  - task: Docker@2
+    inputs:
+      command: 'buildAndPush'
+      repository: '$(IMAGE_NAME)'
+      dockerfile: 'Dockerfile'
+      containerRegistry: '$(DEVOPS_AZURE_CONTAINER_REGISTRY_NAME)' # This was setup within Azure DevOps as a service connection for the project
+      tags: |
+        latest
+        $(Build.BuildId)
+    displayName: 'Build & Push Docker Image'
+
+  - task: AzureWebAppContainer@1
+    inputs:
+      azureSubscription: '$(DEVOPS_AZURE_RESOURCE_MANAGER_NAME)'
+      appName: '$(AZURE_WEB_APP_NAME)'
+      containers: '$(IMAGE_NAME):latest'
+    displayName: 'Deploy to Azure App Service'

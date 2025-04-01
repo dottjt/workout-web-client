@@ -1,3 +1,32 @@
+# # Stage 1: Build
+# FROM node:18-alpine AS builder
+# WORKDIR /app
+
+# # Install dependencies
+# COPY package.json package-lock.json ./
+# RUN npm install --omit=dev
+
+# # Copy the rest of the app and build it
+# COPY . .
+# RUN npm run build
+
+# # Stage 2: Run
+# FROM node:18-alpine
+# WORKDIR /app
+
+# # Copy only the built output from the builder stage
+# COPY --from=builder /app/.next ./.next
+# COPY --from=builder /app/public ./public
+# COPY --from=builder /app/package.json ./
+# COPY --from=builder /app/node_modules ./node_modules
+
+# # Expose port
+# EXPOSE 3000
+
+# # Start Next.js in production mode
+# CMD ["node", "server.js"]
+
+
 # syntax=docker.io/docker/dockerfile:1
 
 FROM node:18-alpine AS base
@@ -27,7 +56,7 @@ COPY . .
 # Next.js collects completely anonymous telemetry data about general usage.
 # Learn more here: https://nextjs.org/telemetry
 # Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN \
   if [ -f yarn.lock ]; then yarn run build; \
@@ -64,3 +93,4 @@ ENV PORT=3000
 # https://nextjs.org/docs/pages/api-reference/config/next-config-js/output
 ENV HOSTNAME="0.0.0.0"
 CMD ["node", "server.js"]
+
